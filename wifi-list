@@ -1,0 +1,31 @@
+#!/bin/sh
+
+# modified by romano@rgtti.com from http://wiki.openwrt.org/doc/faq/faq.wireless#how.to.get.a.list.of.connected.clients
+
+device="wls1"
+i=0
+leasefile="/var/lib/misc/dnsmasq.leases"
+
+printf "%-5s %-15s %-30s %-20s %-10s %-10s %-10s\n" "No" "IP address" "Device name" "MAC address" "Up" "Down" "Time"
+for mac in `iw dev $device station dump | grep Station | cut -d " " -f 2`
+do	
+	i=$((i+1))
+	ip=`cat $leasefile | cut -f 2,3,4 -s -d" " | grep $mac | cut -f 2 -s -d" "`
+    host=`cat $leasefile | cut -f 2,3,4 -s -d" " | grep $mac | cut -f 3 -s -d" "`
+	
+	up=`iw dev wls1 station get $mac | grep "tx bytes" | cut -f 3 | numfmt --to=iec --suffix=B`
+	down=`iw dev wls1 station get $mac | grep "rx bytes" | cut -f 3 | numfmt --to=iec --suffix=B`
+	time=`iw dev wls1 station get $mac | grep "connected time:" | grep -o '[[:digit:]]*'`
+	
+	h_time=`date -d@$time -u +%H:%M` #human readable time
+	
+	if [ -z $ip ]; then
+		ip="N/A"
+	fi
+	
+	if echo x"$host" | grep '*' > /dev/null || [ -z $host ]; then
+		host="N/A"
+	fi 
+
+	printf "%-5s %-15s %-30s %-20s %-10s %-10s %-10s\n" $i $ip $host $mac $up $down $h_time
+done
